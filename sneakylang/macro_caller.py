@@ -172,7 +172,13 @@ def get_nested_macro_chunk(line):
             if line.startswith(MACRO_BEGIN):
                 nested_chunk = get_nested_macro_chunk(line)
                 if nested_chunk is not None:
-                    line, buffer = move_chars(line[len(nested_chunk):], line, buffer)
+                    try:
+                        line, buffer = move_chars(line[len(nested_chunk):], line, buffer)
+                    except ValueError:
+                        # There are some rare cases where `line' doesn't start with
+                        # the generated `chunk' (and thus a ValueError is raised).
+                        # Merely ignoring the error seems to work.
+                        pass
             if line.startswith(MACRO_END):
                 line, buffer = move_chars(line[0:len(MACRO_END)], line, buffer)
                 return buffer
