@@ -59,6 +59,27 @@ class TestSimpleResolving(TestCase):
         self.assertEquals(o.children[0].__class__, TextNode)
         self.assertEquals(o.children[0].content, '((odstavec))')
 
+    def testCallWithoutMacroName(self):
+        s = '(())'
+        o = parse(s, self.register_map, document_root=True)
+        self.assertEquals(len(o.children), 1)
+        self.assertEquals(o.children[0].__class__, TextNode)
+        self.assertEquals(o.children[0].content, '(())')
+
+    def testManyMacroBeginsOdd(self):
+        s = '((((())'
+        o = parse(s, self.register_map, document_root=True)
+        self.assertEquals(len(o.children), 1)
+        self.assertEquals(o.children[0].__class__, TextNode)
+        self.assertEquals(o.children[0].content, '((((())')
+
+    def testManyMacroBeginsEven(self):
+        s = '(((((((()))'
+        o = parse(s, self.register_map, document_root=True)
+        self.assertEquals(len(o.children), 1)
+        self.assertEquals(o.children[0].__class__, TextNode)
+        self.assertEquals(o.children[0].content, '(((((((()))')
+
 class TestNestedMacroSyntax(TestCase):
     def setUp(self):
         self.register_map = RegisterMap({
