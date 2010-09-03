@@ -207,7 +207,10 @@ def get_content(stream):
                 # but we won't include it as content
                 return buffer
 
-            line, buffer = move_chars(line[0], line, buffer)
+            try:
+                line, buffer = move_chars(line[0], line, buffer)
+            except IndexError:
+                pass
 
         return buffer
 
