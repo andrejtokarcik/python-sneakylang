@@ -1,4 +1,4 @@
- #!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """ Test Macros and related things"""
@@ -24,3 +24,5 @@ class TestMacro(TestCase):
         macro.parse_argument_string(u"arg arg2")
         self.assertEquals(macro.arguments, [u'arg', u'arg2'])
 
+if __name__ == '__main__':
+    main()

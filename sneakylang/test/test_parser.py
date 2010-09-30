@@ -38,3 +38,5 @@ class TestParserCapabilities(TestCase):
         self.assertEquals(1, len(res.children))
         self.assertEquals(txt, res.children[0].content)
 
+if __name__ == '__main__':
+    main()

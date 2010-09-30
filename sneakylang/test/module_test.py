@@ -72,6 +72,14 @@ class OneArgumentMacro(Macro):
         self.builder.append(TextNode(content=content), move_actual=False)
         self.builder.move_up()
 
+class ContainerMacro(Macro):
+    name = 'container'
+
+    def expand_to_nodes(self, content):
+        self.builder.append(DummyNode(), move_actual=True)
+        parse(content, self.register_map, self.register, builder=self.builder)
+        self.builder.move_up()
+
 class ParagraphNode(Node): pass
 
 class ParagraphMacro(Macro):
@@ -86,7 +94,6 @@ class ParagraphMacro(Macro):
         if len(args) < 1:
             raise MacroCallError("Paragraph must have some content")
         content = ''.join([word+' ' for word in args])[:-1]
-        print content
         self.builder.append(ParagraphNode())
         parse(content, self.register_map, self.register, builder=self.builder)
         self.builder.move_up()
@@ -107,7 +114,6 @@ class Paragraph(Parser):
             self.stream = self.stream[end.end():]
         else:
             self.argument_string = self.stream
-            print self.argument_string
             self.stream = ''
 
 class StrongNode(Node): pass

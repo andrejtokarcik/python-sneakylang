@@ -215,3 +215,5 @@ class TestBuilderCalledByMacro(TestCase):
         tree = parse(s, RegisterMap({StrongVistingMacro : Register()}), state=state, builder=self.builder, document_root=True)
         self.assertEquals(DocumentNode, tree.__class__)
 
+if __name__ == '__main__':
+    main()

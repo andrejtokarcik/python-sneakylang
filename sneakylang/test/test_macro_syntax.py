@@ -3,7 +3,7 @@
 
 """ Test macro syntax, now being build-in into main parser """
 
-from unittest import TestCase
+from unittest import TestCase, main
 from module_test import *
 
 #logging.basicConfig(level=logging.DEBUG)
@@ -24,7 +24,7 @@ class TestArgumentParsing(TestCase):
         self.assertEquals(DummyNode, o.children[0].__class__)
         self.assertEquals(u"long argument", o.children[0].children[0].content)
 
-    def testParsingLongArgumentWithTrailingSlash(self):
+    def testParsingLongArgumentWithTrailingWhitespace(self):
         s = '((onearg "long argument "))'
         o = parse(s, RegisterMap({OneArgumentMacro : Register()}), document_root = True)
         self.assertEquals(u"long argument ", o.children[0].children[0].content)
@@ -83,9 +83,10 @@ class TestSimpleResolving(TestCase):
 class TestNestedMacroSyntax(TestCase):
     def setUp(self):
         self.register_map = RegisterMap({
+            ContainerMacro : Register([ContainerMacro]),
             ParagraphMacro : Register([StrongMacro]),
             StrongMacro : Register([]),
-            Document : Register([ParagraphMacro])
+            Document : Register([ParagraphMacro, ContainerMacro])
         })
 
     def testProperNested(self):
@@ -107,6 +108,16 @@ class TestNestedMacroSyntax(TestCase):
         self.assertEquals(o.children[0].__class__, StrongNode)
         self.assertEquals(o.children[0].children[0].__class__, TextNode)
         self.assertEquals(o.children[0].children[0].content, 'silne silny)) text odstavce')
+    
+    def testProperMultipleNested(self):
+        s = '((container ((container ((container text))))))'
+        o = parse(s, self.register_map, document_root=True)
+        self.assertEquals(o.children[0].__class__, DummyNode)
+        self.assertEquals(o.children[0].children[0].__class__, DummyNode)
+        self.assertEquals(o.children[0].children[0].children[0].__class__, DummyNode)
+        self.assertEquals(o.children[0].children[0].children[0].children[0].__class__, TextNode)
+        self.assertEquals(o.children[0].children[0].children[0].children[0].content, 'text')
+
 
 class TestKeywordMacroArguments(TestCase):
     def setUp(self):
@@ -122,3 +133,5 @@ class TestKeywordMacroArguments(TestCase):
         self.assertEquals(PictureNode, o.children[0].__class__)
         self.assertEquals(u"My picture", o.children[0].kwargs['title'])
 
+if __name__ == "__main__":
+    main()
