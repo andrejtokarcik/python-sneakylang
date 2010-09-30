@@ -42,83 +42,34 @@ ALLOW_MULTILINE_MACRO = False
 LONG_ARGUMENT_BEGIN = u'"'
 LONG_ARGUMENT_END = u'"'
 
-#TODO: Refactor as parser. See #31
 def parse_macro_arguments(argument_string, return_kwargs=False):
-    if len(argument_string) == 0:
+    if not argument_string:
         return None
 
-    args = []
-    kwargs = {}
-    buffer = u''
-    kwarg_name_buffer = u''
-    in_long_argument = False
-    current_kwarg_name = None
-    last_char = None
+    import re
+    from pyparsing import Group, Or, QuotedString, Regex, Suppress, ZeroOrMore
 
-    for char in argument_string:
-        # first, append to buffers et al
-        if in_long_argument and char != LONG_ARGUMENT_END:
-            buffer = u''.join([buffer, char])
-        elif in_long_argument and char == LONG_ARGUMENT_END:
-            in_long_argument = False
-        elif not in_long_argument and char == KEYWORD_ARGUMENT_SEPARATOR:
-            # we only accept kwargs if they're named
-            if kwarg_name_buffer:
-                # it sill only by used as dictionary name and that must not be u''
-                current_kwarg_name = kwarg_name_buffer.encode('utf-8')
-                kwarg_name_buffer = u''
-                # and kwarg must be removed from stream
-                buffer = buffer[:-len(current_kwarg_name)]
-            else:
-                buffer = u''.join([buffer, char])
-        elif char != ARGUMENT_SEPARATOR:
-            if char == LONG_ARGUMENT_BEGIN and (
-                # we're at beginning of the string
-                last_char is None
-                or
-                # unnamed long argument
-                last_char == ARGUMENT_SEPARATOR
-                or
-                # keyword argument (must be named)
-                (last_char == KEYWORD_ARGUMENT_SEPARATOR and current_kwarg_name)
-            ):
-                in_long_argument = True
-            else:
-                # could be both text and kwarg name
-                buffer = u''.join([buffer, char])
-                kwarg_name_buffer = u''.join([kwarg_name_buffer, char])
-        elif char == ARGUMENT_SEPARATOR:
-            if len(buffer) > 0:
-                if current_kwarg_name:
-                    if kwargs.has_key(current_kwarg_name):
-                        logging.debug(u"Macro argument already contains keyword argument %s (with value %s). Setting to %s" % (current_kwarg_name, kwargs[current_kwarg_name], buffer))
-                    kwargs[current_kwarg_name] = buffer
-                    current_kwarg_name = None
-                else:
-                    args.append(buffer)
-            buffer = u''
-            kwarg_name_buffer = u''
-        else:
-            raise NotImplementedError("char != ARGUMENT_SEPARATOR && char == ARGUMENT_SEPARATOR WTF?!?")
+    # General argument string parser
+    argstring_def = ZeroOrMore(Or([ \
+        QuotedString('"'),                          # long arguments
+        Group(Regex('[\w]+', flags=re.UNICODE) +    # keyword arguments
+          Suppress('=').leaveWhitespace() +
+          Or([Regex('[\w]+'), QuotedString('"')])),
+        Regex(r'\(\(.*\)\)', flags=re.UNICODE),     # nested macros
+        Regex('[\S]+', flags=re.UNICODE)            # basic arguments
+    ]))
+    args = argstring_def.parseString(argument_string).asList()
 
-        # then, cache last char
-        last_char = char
-
-    if len(buffer) > 0:
-        # FIXME: This is cut & pasted from char == ARGUMENT_SEPARATOR
-        if len(buffer) > 0:
-            if current_kwarg_name:
-                if kwargs.has_key(current_kwarg_name):
-                    logging.debug(u"Macro argument already contains keyword argument %s (with value %s). Setting to %s" % (current_kwarg_name, kwargs[current_kwarg_name], buffer))
-                kwargs[current_kwarg_name] = buffer
-                current_kwarg_name = None
-            else:
-                args.append(buffer)
-
+    # The keyword arguments are stored as lists in the `args' variable,
+    # extract them and convert them into a dict, then return
     if return_kwargs:
+        kwargs = {}
+        for arg in args:
+            if isinstance(arg, list):
+                kwargs[str(arg[0])] = arg[1]
+                args.remove(arg)                    # remove the nested list
         return args, kwargs
-    else:
-        return args
+    return args
 
 def resolve_macro_name(stream):
     """ Resolve macro name. Return tuple(macro_name, string_with_macro_arguments) """
@@ -173,7 +124,7 @@ def get_nested_macro_chunk(line):
                 nested_chunk = get_nested_macro_chunk(line)
                 if nested_chunk is not None:
                     try:
-                        line, buffer = move_chars(line[len(nested_chunk):], line, buffer)
+                        line, buffer = move_chars(line[:len(nested_chunk)], line, buffer)
                     except ValueError:
                         # There are some rare cases where `line' doesn't start with
                         # the generated `chunk' (and thus a ValueError is raised).
@@ -213,10 +164,8 @@ def get_content(stream):
                 # but we won't include it as content
                 return buffer
 
-            try:
+            if line:
                 line, buffer = move_chars(line[0], line, buffer)
-            except IndexError:
-                pass
 
         return buffer
 
